@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-app text-main;
+  }
+
+  /* Colores de Expoflores aplicados globalmente */
+  :root {
+    --color-primary: #003366;
+    --color-secondary: #669933;
+    --color-accent: #E91E63;
+    --color-background: #F4F6F8;
+    --color-text-main: #1A202C;
+  }
+}
+
+@layer components {
+  /* Componentes personalizados se agregarán aquí si es necesario */
+}
+
+@layer utilities {
+  /* Animaciones para el modal de éxito */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes progress {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slideUp {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-progress {
+    width: 100%;
+  }
+}
