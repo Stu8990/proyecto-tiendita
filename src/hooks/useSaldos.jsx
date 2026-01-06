@@ -56,16 +56,33 @@ export const useSaldos = (userId = null) => {
   // Fetch inicial
   useEffect(() => {
     let mounted = true
+    let abortController = new AbortController()
 
-    if (user) {
-      fetchSaldos()
-    } else {
-      // Si no hay usuario, resetear loading
-      if (mounted) setLoading(false)
+    const loadData = async () => {
+      if (!user) {
+        if (mounted) setLoading(false)
+        return
+      }
+
+      try {
+        await fetchSaldos()
+      } catch (err) {
+        if (!mounted || abortController.signal.aborted) {
+          return
+        }
+        console.error('Error loading saldos:', err)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
     }
+
+    loadData()
 
     return () => {
       mounted = false
+      abortController.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userId, isAdmin])

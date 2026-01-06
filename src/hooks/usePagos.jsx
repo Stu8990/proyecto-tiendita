@@ -122,16 +122,33 @@ export const usePagos = (userId = null, limit = 100) => {
   // Fetch inicial
   useEffect(() => {
     let mounted = true
+    let abortController = new AbortController()
 
-    if (user) {
-      fetchPagos()
-    } else {
-      // Si no hay usuario, resetear loading
-      if (mounted) setLoading(false)
+    const loadData = async () => {
+      if (!user) {
+        if (mounted) setLoading(false)
+        return
+      }
+
+      try {
+        await fetchPagos()
+      } catch (err) {
+        if (!mounted || abortController.signal.aborted) {
+          return
+        }
+        console.error('Error loading pagos:', err)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
     }
+
+    loadData()
 
     return () => {
       mounted = false
+      abortController.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userId, isAdmin])

@@ -15,20 +15,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    // Reducir tiempo de espera para token refresh
     storageKey: 'bar-deudas-auth',
     storage: window.localStorage
   },
   global: {
     headers: {
-      // Habilitar caché del navegador
       'Cache-Control': 'max-age=60'
+    },
+    // Agregar timeout global para evitar queries colgadas
+    fetch: (url, options = {}) => {
+      return Promise.race([
+        fetch(url, options),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout')), 30000)
+        )
+      ])
     }
   },
   db: {
     schema: 'public'
   },
-  // Configuración de realtime (deshabilitado por ahora para mejor performance)
   realtime: {
     params: {
       eventsPerSecond: 2

@@ -114,16 +114,34 @@ export const useConsumos = (userId = null, limit = 100) => {
   // Fetch inicial
   useEffect(() => {
     let mounted = true
+    let abortController = new AbortController()
 
-    if (user) {
-      fetchConsumos()
-    } else {
-      // Si no hay usuario, resetear loading
-      if (mounted) setLoading(false)
+    const loadData = async () => {
+      if (!user) {
+        if (mounted) setLoading(false)
+        return
+      }
+
+      try {
+        await fetchConsumos()
+      } catch (err) {
+        // Si el componente se desmontó o se abortó, ignorar el error
+        if (!mounted || abortController.signal.aborted) {
+          return
+        }
+        console.error('Error loading consumos:', err)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
     }
+
+    loadData()
 
     return () => {
       mounted = false
+      abortController.abort()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userId, isAdmin])
