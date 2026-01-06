@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useConsumos } from '../../hooks/useConsumos'
-import { Button, Input, Card, SuccessModal } from '../ui'
+import { Button, Input, Card, SuccessModal, ConfirmModal } from '../ui'
 import { PRODUCTOS } from '../../utils/constants'
 
 /**
@@ -23,6 +23,19 @@ export const ConsumoForm = ({ userIdProp, onSuccess }) => {
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  // Ordenar productos alfabéticamente para usuarios no-admin
+  const productosOrdenados = useMemo(() => {
+    if (isAdmin) {
+      // Admin ve todos los productos en el orden original
+      return PRODUCTOS
+    } else {
+      // Usuarios ven productos ordenados alfabéticamente (excepto "Otro")
+      const productosFiltrados = PRODUCTOS.filter(p => p.value !== 'otro')
+      return [...productosFiltrados].sort((a, b) => a.label.localeCompare(b.label))
+    }
+  }, [isAdmin])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -78,6 +91,12 @@ export const ConsumoForm = ({ userIdProp, onSuccess }) => {
 
     if (!validate()) return
 
+    // Mostrar modal de confirmación en lugar de registrar directamente
+    setShowConfirmModal(true)
+  }
+
+  const confirmSubmit = async () => {
+    setShowConfirmModal(false)
     setIsLoading(true)
     setErrors({})
 
@@ -141,16 +160,11 @@ export const ConsumoForm = ({ userIdProp, onSuccess }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">Selecciona un producto</option>
-            {PRODUCTOS.map(producto => {
-              // Solo admin puede seleccionar "Otro"
-              if (producto.value === 'otro' && !isAdmin) return null
-
-              return (
-                <option key={producto.value} value={producto.value}>
-                  {producto.label} {producto.precio > 0 && `- $${producto.precio}`}
-                </option>
-              )
-            })}
+            {productosOrdenados.map(producto => (
+              <option key={producto.value} value={producto.value}>
+                {producto.label} {producto.precio > 0 && `- $${producto.precio}`}
+              </option>
+            ))}
           </select>
           {errors.producto && (
             <p className="mt-1 text-sm text-red-600">{errors.producto}</p>
@@ -229,6 +243,21 @@ export const ConsumoForm = ({ userIdProp, onSuccess }) => {
         </Button>
       </form>
     </Card>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        show={showConfirmModal}
+        onConfirm={confirmSubmit}
+        onCancel={() => setShowConfirmModal(false)}
+        title="¿Estás seguro?"
+        message={`Vas a registrar: ${
+          formData.producto === 'otro'
+            ? formData.productoCustom
+            : PRODUCTOS.find(p => p.value === formData.producto)?.label || ''
+        } (${formData.cantidad} ${parseInt(formData.cantidad) === 1 ? 'unidad' : 'unidades'})`}
+        confirmText="Sí, registrar"
+        cancelText="No, cancelar"
+      />
 
       {/* Modal de éxito */}
       <SuccessModal

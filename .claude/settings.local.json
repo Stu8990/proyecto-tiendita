@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(test -d \"D:\\\\Documentos\\\\GitHub\\\\proyecto-tiendita\\\\public\\\\images\")"
+      "Bash(test -d \"D:\\\\Documentos\\\\GitHub\\\\proyecto-tiendita\\\\public\\\\images\")",
+      "Bash(test:*)",
+      "Bash(dir \"D:\\\\Documentos\\\\GitHub\\\\proyecto-tiendita\\\\public\\\\images\")",
+      "Bash(findstr:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
