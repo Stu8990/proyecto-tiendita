@@ -68,24 +68,17 @@ export const useConsumos = (userId = null, limit = 100) => {
 
   // Función pública para refetch manual (sin signal)
   const refetchConsumos = async () => {
-    if (!user) {
-      console.warn('refetchConsumos: No hay usuario, abortando')
-      return
-    }
-
-    console.log('refetchConsumos: Iniciando refetch para user:', user.id, 'userId:', userId)
+    if (!user) return
 
     try {
       setLoading(true)
       const data = await fetchConsumos()
-      console.log('refetchConsumos: Datos obtenidos:', data?.length, 'registros')
 
       if (data !== null) {
         setConsumos(data)
         // Actualizar caché
         const cacheKey = `consumos_${user.id}_${userId || 'all'}`
         localStorage.setItem(cacheKey, JSON.stringify(data))
-        console.log('refetchConsumos: Cache actualizado con key:', cacheKey)
       }
     } catch (err) {
       console.error('Error refetching consumos:', err)
@@ -99,8 +92,6 @@ export const useConsumos = (userId = null, limit = 100) => {
     try {
       setError(null)
 
-      console.log('Agregando consumo:', consumoData)
-
       const { data, error: insertError } = await supabase
         .from('consumos')
         .insert([
@@ -113,17 +104,10 @@ export const useConsumos = (userId = null, limit = 100) => {
         ])
         .select()
 
-      if (insertError) {
-        console.error('Error en insert:', insertError)
-        throw insertError
-      }
-
-      console.log('Consumo agregado exitosamente:', data)
+      if (insertError) throw insertError
 
       // Refetch para actualizar la lista
-      console.log('Refetching consumos...')
       await refetchConsumos()
-      console.log('Refetch completado')
 
       return { data, error: null }
     } catch (err) {
