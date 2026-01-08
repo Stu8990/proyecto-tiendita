@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Layout } from '../components/layout/Layout'
 import { ConsumoForm } from '../components/consumos/ConsumoForm'
 import { ConsumoList } from '../components/consumos/ConsumoList'
@@ -18,21 +18,28 @@ export const AdminDashboard = () => {
   const [usuarios, setUsuarios] = useState([])
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState('')
 
-  const { consumos, loading: loadingConsumos, refetch: refetchConsumos } = useConsumos()
+  const { consumos, loading: loadingConsumos, refetch: refetchConsumos, addConsumo } = useConsumos()
   const { pagos, loading: loadingPagos, anularPago, refetch: refetchPagos } = usePagos()
-  const [saldosKey, setSaldosKey] = useState(0)
+  const refetchSaldosRef = useRef(null)
 
   // Cargar usuarios
   useEffect(() => {
     loadUsuarios()
   }, [])
 
+  // Callback estable para recibir la función refetch de SaldosGlobales
+  const handleRefetchSaldos = useCallback((refetchFn) => {
+    refetchSaldosRef.current = refetchFn
+  }, [])
+
   // Función para refrescar todo después de cualquier cambio
-  const refreshAll = () => {
+  const refreshAll = useCallback(() => {
     refetchConsumos()
     refetchPagos()
-    setSaldosKey(prev => prev + 1) // Forzar re-render de saldos
-  }
+    if (refetchSaldosRef.current) {
+      refetchSaldosRef.current()
+    }
+  }, [refetchConsumos, refetchPagos])
 
   // Wrapper para anular pago que refresca todo
   const handleAnularPago = async (pagoId) => {
@@ -107,7 +114,7 @@ export const AdminDashboard = () => {
           <div className="p-6">
             {/* Tab: Saldos Globales */}
             {activeTab === 'saldos' && (
-              <SaldosGlobales key={saldosKey} />
+              <SaldosGlobales onRefetch={handleRefetchSaldos} />
             )}
 
             {/* Tab: Todos los Consumos */}
@@ -196,6 +203,7 @@ export const AdminDashboard = () => {
                 {usuarioSeleccionado ? (
                   <ConsumoForm
                     userIdProp={usuarioSeleccionado}
+                    addConsumo={addConsumo}
                     onSuccess={() => {
                       refreshAll()
                       setUsuarioSeleccionado('')

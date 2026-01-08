@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, Loading, Input } from '../ui'
 import { formatCurrency } from '../../utils/formatters'
 import { useSaldos } from '../../hooks/useSaldos'
@@ -6,12 +6,20 @@ import { useAuth } from '../../hooks/useAuth'
 
 /**
  * Componente para mostrar saldos de todos los usuarios (solo admin)
+ * @param {function} onRefetch - Callback para obtener la función refetch
  */
-export const SaldosGlobales = () => {
+export const SaldosGlobales = ({ onRefetch }) => {
   const { isAdmin } = useAuth()
-  const { saldos, loading } = useSaldos()
+  const { saldos, loading, refetch } = useSaldos()
   const [filtro, setFiltro] = useState('')
   const [ordenar, setOrdenar] = useState('nombre') // nombre, saldo, consumido, pagado
+
+  // Exponer refetch al componente padre
+  useEffect(() => {
+    if (onRefetch && refetch) {
+      onRefetch(refetch)
+    }
+  }, [onRefetch, refetch])
 
   if (!isAdmin) {
     return (

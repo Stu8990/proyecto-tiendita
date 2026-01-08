@@ -13,10 +13,9 @@ export const useSaldos = (userId = null) => {
 
   const { user, isAdmin } = useAuth()
 
-  // Fetch saldos desde la vista
-  const fetchSaldos = async () => {
+  // Fetch saldos desde la vista (sin manejar loading internamente)
+  const fetchSaldos = async (signal = null) => {
     try {
-      setLoading(true)
       setError(null)
 
       let query = supabase
@@ -31,16 +30,28 @@ export const useSaldos = (userId = null) => {
         query = query.eq('user_id', user.id)
       }
 
+      // Agregar abort signal si se proporciona
+      if (signal) {
+        query = query.abortSignal(signal)
+      }
+
       const { data, error: fetchError } = await query
+
+      // Verificar si fue abortado
+      if (signal?.aborted) {
+        return null
+      }
 
       if (fetchError) throw fetchError
 
-      setSaldos(data || [])
+      return data || []
     } catch (err) {
-      console.error('Error fetching saldos:', err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
+      // Solo loggear si no fue abortado
+      if (!signal?.aborted) {
+        console.error('Error fetching saldos:', err)
+        setError(err.message)
+      }
+      throw err
     }
   }
 
@@ -59,19 +70,47 @@ export const useSaldos = (userId = null) => {
     let abortController = new AbortController()
 
     const loadData = async () => {
+      // Solo setear loading si hay usuario
       if (!user) {
         if (mounted) setLoading(false)
         return
       }
 
-      try {
-        await fetchSaldos()
-      } catch (err) {
-        if (!mounted || abortController.signal.aborted) {
-          return
+      // Intentar cargar desde caché primero
+      const cacheKey = `saldos_${user.id}_${userId || 'all'}`
+      const cachedData = localStorage.getItem(cacheKey)
+      if (cachedData && mounted) {
+        try {
+          const parsed = JSON.parse(cachedData)
+          setSaldos(parsed)
+          setLoading(false) // Mostrar caché inmediatamente
+        } catch (e) {
+          console.error('Error parseando caché de saldos:', e)
         }
-        console.error('Error loading saldos:', err)
+      }
+
+      // Setear loading solo si no hay caché
+      if (!cachedData && mounted) {
+        setLoading(true)
+      }
+
+      try {
+        const data = await fetchSaldos(abortController.signal)
+
+        // Solo actualizar estado si el componente sigue montado
+        if (mounted && data !== null) {
+          setSaldos(data)
+          // Guardar en caché
+          localStorage.setItem(cacheKey, JSON.stringify(data))
+        }
+      } catch (err) {
+        // Solo actualizar error si no fue abortado y el componente sigue montado
+        if (!abortController.signal.aborted && mounted) {
+          console.error('Error loading saldos:', err)
+          setError(err.message)
+        }
       } finally {
+        // Solo actualizar loading si el componente sigue montado
         if (mounted) {
           setLoading(false)
         }
@@ -87,11 +126,31 @@ export const useSaldos = (userId = null) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userId, isAdmin])
 
+  // Función pública para refetch manual (sin signal)
+  const refetchSaldos = async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      const data = await fetchSaldos()
+      if (data !== null) {
+        setSaldos(data)
+        // Actualizar caché
+        const cacheKey = `saldos_${user.id}_${userId || 'all'}`
+        localStorage.setItem(cacheKey, JSON.stringify(data))
+      }
+    } catch (err) {
+      console.error('Error refetching saldos:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     saldos,
     loading,
     error,
     getSaldoUsuario,
-    refetch: fetchSaldos
+    refetch: refetchSaldos
   }
 }

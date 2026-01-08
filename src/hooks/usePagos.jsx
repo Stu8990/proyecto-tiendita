@@ -14,10 +14,9 @@ export const usePagos = (userId = null, limit = 100) => {
 
   const { user, isAdmin } = useAuth()
 
-  // Fetch pagos
-  const fetchPagos = async () => {
+  // Fetch pagos (sin manejar loading internamente)
+  const fetchPagos = async (signal = null) => {
     try {
-      setLoading(true)
       setError(null)
 
       let query = supabase
@@ -43,14 +42,46 @@ export const usePagos = (userId = null, limit = 100) => {
         query = query.limit(limit)
       }
 
+      // Agregar abort signal si se proporciona
+      if (signal) {
+        query = query.abortSignal(signal)
+      }
+
       const { data, error: fetchError } = await query
+
+      // Verificar si fue abortado
+      if (signal?.aborted) {
+        return null
+      }
 
       if (fetchError) throw fetchError
 
-      setPagos(data || [])
+      return data || []
     } catch (err) {
-      console.error('Error fetching pagos:', err)
-      setError(err.message)
+      // Solo loggear si no fue abortado
+      if (!signal?.aborted) {
+        console.error('Error fetching pagos:', err)
+        setError(err.message)
+      }
+      throw err
+    }
+  }
+
+  // Función pública para refetch manual (sin signal)
+  const refetchPagos = async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      const data = await fetchPagos()
+      if (data !== null) {
+        setPagos(data)
+        // Actualizar caché
+        const cacheKey = `pagos_${user.id}_${userId || 'all'}`
+        localStorage.setItem(cacheKey, JSON.stringify(data))
+      }
+    } catch (err) {
+      console.error('Error refetching pagos:', err)
     } finally {
       setLoading(false)
     }
@@ -79,7 +110,7 @@ export const usePagos = (userId = null, limit = 100) => {
       if (insertError) throw insertError
 
       // Refetch para actualizar la lista
-      await fetchPagos()
+      await refetchPagos()
 
       return { data, error: null }
     } catch (err) {
@@ -109,7 +140,7 @@ export const usePagos = (userId = null, limit = 100) => {
       if (updateError) throw updateError
 
       // Refetch para actualizar la lista
-      await fetchPagos()
+      await refetchPagos()
 
       return { error: null }
     } catch (err) {
@@ -125,19 +156,47 @@ export const usePagos = (userId = null, limit = 100) => {
     let abortController = new AbortController()
 
     const loadData = async () => {
+      // Solo setear loading si hay usuario
       if (!user) {
         if (mounted) setLoading(false)
         return
       }
 
-      try {
-        await fetchPagos()
-      } catch (err) {
-        if (!mounted || abortController.signal.aborted) {
-          return
+      // Intentar cargar desde caché primero
+      const cacheKey = `pagos_${user.id}_${userId || 'all'}`
+      const cachedData = localStorage.getItem(cacheKey)
+      if (cachedData && mounted) {
+        try {
+          const parsed = JSON.parse(cachedData)
+          setPagos(parsed)
+          setLoading(false) // Mostrar caché inmediatamente
+        } catch (e) {
+          console.error('Error parseando caché de pagos:', e)
         }
-        console.error('Error loading pagos:', err)
+      }
+
+      // Setear loading solo si no hay caché
+      if (!cachedData && mounted) {
+        setLoading(true)
+      }
+
+      try {
+        const data = await fetchPagos(abortController.signal)
+
+        // Solo actualizar estado si el componente sigue montado
+        if (mounted && data !== null) {
+          setPagos(data)
+          // Guardar en caché
+          localStorage.setItem(cacheKey, JSON.stringify(data))
+        }
+      } catch (err) {
+        // Solo actualizar error si no fue abortado y el componente sigue montado
+        if (!abortController.signal.aborted && mounted) {
+          console.error('Error loading pagos:', err)
+          setError(err.message)
+        }
       } finally {
+        // Solo actualizar loading si el componente sigue montado
         if (mounted) {
           setLoading(false)
         }
@@ -159,6 +218,6 @@ export const usePagos = (userId = null, limit = 100) => {
     error,
     addPago,
     anularPago,
-    refetch: fetchPagos
+    refetch: refetchPagos
   }
 }

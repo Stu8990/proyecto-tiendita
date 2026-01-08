@@ -45,6 +45,9 @@ export const AuthProvider = ({ children }) => {
       console.error('Error cargando perfil:', err)
       setError(err.message)
       return null
+    } finally {
+      // CRÍTICO: Siempre resetear loading al final
+      setLoading(false)
     }
   }
 

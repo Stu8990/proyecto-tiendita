@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { Layout } from '../components/layout/Layout'
 import { ConsumoForm } from '../components/consumos/ConsumoForm'
 import { ConsumoList } from '../components/consumos/ConsumoList'
@@ -11,13 +11,20 @@ import { useAuth } from '../hooks/useAuth'
  */
 export const MisConsumos = () => {
   const { user } = useAuth()
-  const { consumos, loading, refetch } = useConsumos(user?.id)
-  const [saldoKey, setSaldoKey] = useState(0)
+  const { consumos, loading, refetch, addConsumo } = useConsumos(user?.id)
+  const refetchSaldoRef = useRef(null)
+
+  // Callback estable para recibir la función refetch de MiSaldo
+  const handleRefetchSaldo = useCallback((refetchFn) => {
+    refetchSaldoRef.current = refetchFn
+  }, [])
 
   // Función para refrescar todo cuando se registra un consumo
   const handleConsumoSuccess = useCallback(() => {
     refetch() // Refrescar lista de consumos
-    setSaldoKey(prev => prev + 1) // Forzar re-render del saldo
+    if (refetchSaldoRef.current) {
+      refetchSaldoRef.current() // Refrescar saldo
+    }
   }, [refetch])
 
   return (
@@ -31,11 +38,11 @@ export const MisConsumos = () => {
           </p>
         </div>
 
-        {/* Saldo - se refresca con key */}
-        <MiSaldo key={saldoKey} />
+        {/* Saldo - se refresca con callback */}
+        <MiSaldo onRefetch={handleRefetchSaldo} />
 
         {/* Formulario */}
-        <ConsumoForm onSuccess={handleConsumoSuccess} />
+        <ConsumoForm addConsumo={addConsumo} onSuccess={handleConsumoSuccess} />
 
         {/* Lista de consumos */}
         <ConsumoList

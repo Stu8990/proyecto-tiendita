@@ -9,10 +9,14 @@ import { PRODUCTOS } from '../../utils/constants'
  * @param {object} props
  * @param {string} props.userIdProp - ID del usuario (opcional, para admin)
  * @param {function} props.onSuccess - Callback al agregar exitosamente
+ * @param {function} props.addConsumo - Función para agregar consumo (opcional, usa hook si no se provee)
  */
-export const ConsumoForm = ({ userIdProp, onSuccess }) => {
+export const ConsumoForm = ({ userIdProp, onSuccess, addConsumo: addConsumoProp }) => {
   const { user, isAdmin } = useAuth()
-  const { addConsumo } = useConsumos()
+  const { addConsumo: addConsumoHook } = useConsumos()
+
+  // Usar la función que se pasa por prop o la del hook
+  const addConsumo = addConsumoProp || addConsumoHook
 
   const [formData, setFormData] = useState({
     producto: '',

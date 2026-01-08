@@ -14,10 +14,9 @@ export const useConsumos = (userId = null, limit = 100) => {
 
   const { user, isAdmin } = useAuth()
 
-  // Fetch consumos
-  const fetchConsumos = async () => {
+  // Fetch consumos (sin manejar loading internamente)
+  const fetchConsumos = async (signal = null) => {
     try {
-      setLoading(true)
       setError(null)
 
       let query = supabase
@@ -42,14 +41,54 @@ export const useConsumos = (userId = null, limit = 100) => {
         query = query.limit(limit)
       }
 
+      // Agregar abort signal si se proporciona
+      if (signal) {
+        query = query.abortSignal(signal)
+      }
+
       const { data, error: fetchError } = await query
+
+      // Verificar si fue abortado
+      if (signal?.aborted) {
+        return null
+      }
 
       if (fetchError) throw fetchError
 
-      setConsumos(data || [])
+      return data || []
     } catch (err) {
-      console.error('Error fetching consumos:', err)
-      setError(err.message)
+      // Solo loggear si no fue abortado
+      if (!signal?.aborted) {
+        console.error('Error fetching consumos:', err)
+        setError(err.message)
+      }
+      throw err
+    }
+  }
+
+  // Función pública para refetch manual (sin signal)
+  const refetchConsumos = async () => {
+    if (!user) {
+      console.warn('refetchConsumos: No hay usuario, abortando')
+      return
+    }
+
+    console.log('refetchConsumos: Iniciando refetch para user:', user.id, 'userId:', userId)
+
+    try {
+      setLoading(true)
+      const data = await fetchConsumos()
+      console.log('refetchConsumos: Datos obtenidos:', data?.length, 'registros')
+
+      if (data !== null) {
+        setConsumos(data)
+        // Actualizar caché
+        const cacheKey = `consumos_${user.id}_${userId || 'all'}`
+        localStorage.setItem(cacheKey, JSON.stringify(data))
+        console.log('refetchConsumos: Cache actualizado con key:', cacheKey)
+      }
+    } catch (err) {
+      console.error('Error refetching consumos:', err)
     } finally {
       setLoading(false)
     }
@@ -59,6 +98,8 @@ export const useConsumos = (userId = null, limit = 100) => {
   const addConsumo = async (consumoData) => {
     try {
       setError(null)
+
+      console.log('Agregando consumo:', consumoData)
 
       const { data, error: insertError } = await supabase
         .from('consumos')
@@ -72,10 +113,17 @@ export const useConsumos = (userId = null, limit = 100) => {
         ])
         .select()
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('Error en insert:', insertError)
+        throw insertError
+      }
+
+      console.log('Consumo agregado exitosamente:', data)
 
       // Refetch para actualizar la lista
-      await fetchConsumos()
+      console.log('Refetching consumos...')
+      await refetchConsumos()
+      console.log('Refetch completado')
 
       return { data, error: null }
     } catch (err) {
@@ -101,7 +149,7 @@ export const useConsumos = (userId = null, limit = 100) => {
       if (updateError) throw updateError
 
       // Refetch para actualizar la lista
-      await fetchConsumos()
+      await refetchConsumos()
 
       return { error: null }
     } catch (err) {
@@ -117,20 +165,47 @@ export const useConsumos = (userId = null, limit = 100) => {
     let abortController = new AbortController()
 
     const loadData = async () => {
+      // Solo setear loading si hay usuario
       if (!user) {
         if (mounted) setLoading(false)
         return
       }
 
-      try {
-        await fetchConsumos()
-      } catch (err) {
-        // Si el componente se desmontó o se abortó, ignorar el error
-        if (!mounted || abortController.signal.aborted) {
-          return
+      // Intentar cargar desde caché primero
+      const cacheKey = `consumos_${user.id}_${userId || 'all'}`
+      const cachedData = localStorage.getItem(cacheKey)
+      if (cachedData && mounted) {
+        try {
+          const parsed = JSON.parse(cachedData)
+          setConsumos(parsed)
+          setLoading(false) // Mostrar caché inmediatamente
+        } catch (e) {
+          console.error('Error parseando caché de consumos:', e)
         }
-        console.error('Error loading consumos:', err)
+      }
+
+      // Setear loading solo si no hay caché
+      if (!cachedData && mounted) {
+        setLoading(true)
+      }
+
+      try {
+        const data = await fetchConsumos(abortController.signal)
+
+        // Solo actualizar estado si el componente sigue montado
+        if (mounted && data !== null) {
+          setConsumos(data)
+          // Guardar en caché
+          localStorage.setItem(cacheKey, JSON.stringify(data))
+        }
+      } catch (err) {
+        // Solo actualizar error si no fue abortado y el componente sigue montado
+        if (!abortController.signal.aborted && mounted) {
+          console.error('Error loading consumos:', err)
+          setError(err.message)
+        }
       } finally {
+        // Solo actualizar loading si el componente sigue montado
         if (mounted) {
           setLoading(false)
         }
@@ -152,6 +227,6 @@ export const useConsumos = (userId = null, limit = 100) => {
     error,
     addConsumo,
     anularConsumo,
-    refetch: fetchConsumos
+    refetch: refetchConsumos
   }
 }

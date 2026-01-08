@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Card, Loading } from '../ui'
 import { formatCurrency } from '../../utils/formatters'
 import { useSaldos } from '../../hooks/useSaldos'
@@ -5,10 +6,18 @@ import { useAuth } from '../../hooks/useAuth'
 
 /**
  * Componente para mostrar el saldo de un usuario
+ * @param {function} onRefetch - Callback para obtener la función refetch
  */
-export const MiSaldo = () => {
+export const MiSaldo = ({ onRefetch }) => {
   const { user } = useAuth()
-  const { saldos, loading } = useSaldos(user?.id)
+  const { saldos, loading, refetch } = useSaldos(user?.id)
+
+  // Exponer refetch al componente padre
+  useEffect(() => {
+    if (onRefetch && refetch) {
+      onRefetch(refetch)
+    }
+  }, [onRefetch, refetch])
 
   if (loading) {
     return (
