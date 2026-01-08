@@ -16,37 +16,47 @@ export const AuthProvider = ({ children }) => {
   // Cargar perfil del usuario
   const loadProfile = async (userId) => {
     try {
+      console.log('👤 loadProfile: Cargando perfil para userId:', userId)
+
       // Intentar cargar desde caché primero
       const cachedProfile = localStorage.getItem(`profile_${userId}`)
       if (cachedProfile) {
         try {
           const parsed = JSON.parse(cachedProfile)
+          console.log('👤 loadProfile: Cache encontrado, perfil:', parsed)
           setProfile(parsed)
           setLoading(false) // Mostrar caché inmediatamente
         } catch (e) {
-          console.error('Error parseando caché:', e)
+          console.error('❌ Error parseando caché:', e)
         }
+      } else {
+        console.log('👤 loadProfile: No hay cache')
       }
 
       // Luego hacer la query real
+      console.log('👤 loadProfile: Haciendo query a Supabase...')
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
+      console.log('👤 loadProfile: Query completada. Data:', data, 'Error:', error)
+
       if (error) throw error
 
       // Guardar en caché y actualizar state
       localStorage.setItem(`profile_${userId}`, JSON.stringify(data))
       setProfile(data)
+      console.log('👤 loadProfile: Perfil guardado exitosamente')
       return data
     } catch (err) {
-      console.error('Error cargando perfil:', err)
+      console.error('❌ Error cargando perfil:', err)
       setError(err.message)
       return null
     } finally {
       // CRÍTICO: Siempre resetear loading al final
+      console.log('👤 loadProfile: Setting loading = false')
       setLoading(false)
     }
   }
@@ -58,19 +68,24 @@ export const AuthProvider = ({ children }) => {
     // Función async para cargar sesión
     const initSession = async () => {
       try {
+        console.log('🔐 Iniciando sesión...')
         const { data: { session } } = await supabase.auth.getSession()
+        console.log('🔐 Sesión obtenida:', session?.user ? 'Usuario encontrado' : 'Sin sesión')
 
         if (!mounted) return
 
         setUser(session?.user ?? null)
 
         if (session?.user) {
+          console.log('🔐 Cargando perfil para user:', session.user.id)
           await loadProfile(session.user.id)
+          console.log('🔐 Perfil cargado')
         } else {
+          console.log('🔐 No hay sesión activa')
           setLoading(false)
         }
       } catch (err) {
-        console.error('Error inicializando sesión:', err)
+        console.error('❌ Error inicializando sesión:', err)
         if (mounted) {
           setLoading(false)
           setError(err.message)

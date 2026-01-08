@@ -100,6 +100,11 @@ export const ConsumoForm = ({ userIdProp, onSuccess, addConsumo: addConsumoProp 
   }
 
   const confirmSubmit = async () => {
+    console.log('📝 ConsumoForm: confirmSubmit iniciando')
+    console.log('📝 ConsumoForm: formData:', formData)
+    console.log('📝 ConsumoForm: userIdProp:', userIdProp)
+    console.log('📝 ConsumoForm: user:', user)
+
     setShowConfirmModal(false)
     setIsLoading(true)
     setErrors({})
@@ -115,13 +120,21 @@ export const ConsumoForm = ({ userIdProp, onSuccess, addConsumo: addConsumoProp 
       valor_unitario: parseFloat(formData.valor_unitario)
     }
 
+    console.log('📝 ConsumoForm: consumoData preparado:', consumoData)
+    console.log('📝 ConsumoForm: Llamando addConsumo...')
+
     const { error } = await addConsumo(consumoData)
 
+    console.log('📝 ConsumoForm: addConsumo retornó. Error:', error)
+
     if (error) {
+      console.error('❌ ConsumoForm: Error al registrar:', error)
       setErrors({ general: 'Error al registrar consumo. Intenta de nuevo.' })
       setIsLoading(false)
       return
     }
+
+    console.log('✅ ConsumoForm: Consumo registrado exitosamente')
 
     // Resetear formulario
     setFormData({
@@ -135,10 +148,12 @@ export const ConsumoForm = ({ userIdProp, onSuccess, addConsumo: addConsumoProp 
     setShowSuccessModal(true)
 
     if (onSuccess) {
+      console.log('📝 ConsumoForm: Llamando onSuccess callback')
       onSuccess()
     }
 
     setIsLoading(false)
+    console.log('✅ ConsumoForm: Proceso completado')
   }
 
   return (

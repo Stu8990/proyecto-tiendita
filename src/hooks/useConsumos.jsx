@@ -92,26 +92,40 @@ export const useConsumos = (userId = null, limit = 100) => {
     try {
       setError(null)
 
+      console.log('🍺 addConsumo: Iniciando...', consumoData)
+      console.log('🍺 addConsumo: Usuario actual:', user)
+
+      const insertData = {
+        user_id: consumoData.user_id || user.id,
+        producto: consumoData.producto,
+        cantidad: consumoData.cantidad,
+        valor_unitario: consumoData.valor_unitario
+      }
+
+      console.log('🍺 addConsumo: Datos a insertar:', insertData)
+
       const { data, error: insertError } = await supabase
         .from('consumos')
-        .insert([
-          {
-            user_id: consumoData.user_id || user.id,
-            producto: consumoData.producto,
-            cantidad: consumoData.cantidad,
-            valor_unitario: consumoData.valor_unitario
-          }
-        ])
+        .insert([insertData])
         .select()
 
-      if (insertError) throw insertError
+      console.log('🍺 addConsumo: Respuesta de Supabase - data:', data, 'error:', insertError)
+
+      if (insertError) {
+        console.error('❌ Error en insert:', insertError)
+        throw insertError
+      }
+
+      console.log('✅ addConsumo: Consumo insertado exitosamente')
 
       // Refetch para actualizar la lista
+      console.log('🔄 addConsumo: Refetching consumos...')
       await refetchConsumos()
+      console.log('✅ addConsumo: Refetch completado')
 
       return { data, error: null }
     } catch (err) {
-      console.error('Error adding consumo:', err)
+      console.error('❌ Error adding consumo:', err)
       setError(err.message)
       return { data: null, error: err }
     }
