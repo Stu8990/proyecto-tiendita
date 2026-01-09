@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useConsumos } from '../../hooks/useConsumos'
-import { Button } from '../ui'
+import { Button, ConfirmModal } from '../ui'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 
 /**
@@ -11,13 +11,17 @@ export const ConsumoItem = ({ consumo }) => {
   const { user, isAdmin } = useAuth()
   const { anularConsumo } = useConsumos()
   const [isAnulando, setIsAnulando] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   // Solo admin puede anular consumos
   const puedeAnular = isAdmin && !consumo.anulado
 
-  const handleAnular = async () => {
-    if (!confirm('¿Estás seguro de anular este consumo?')) return
+  const handleAnular = () => {
+    setShowConfirmModal(true)
+  }
 
+  const confirmAnular = async () => {
+    setShowConfirmModal(false)
     setIsAnulando(true)
     await anularConsumo(consumo.id)
     setIsAnulando(false)
@@ -92,6 +96,17 @@ export const ConsumoItem = ({ consumo }) => {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        show={showConfirmModal}
+        onConfirm={confirmAnular}
+        onCancel={() => setShowConfirmModal(false)}
+        title="¿Estás seguro?"
+        message={`Vas a anular: ${consumo.producto} (${consumo.cantidad} ${consumo.cantidad === 1 ? 'unidad' : 'unidades'}) - ${formatCurrency(consumo.total)}`}
+        confirmText="Sí, anular"
+        cancelText="No, cancelar"
+      />
     </div>
   )
 }

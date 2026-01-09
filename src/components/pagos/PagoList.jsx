@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loading, Card, Button } from '../ui'
+import { Loading, Card, Button, ConfirmModal } from '../ui'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -9,13 +9,22 @@ import { useAuth } from '../../hooks/useAuth'
 export const PagoList = ({ pagos, loading, title = 'Pagos', onAnular }) => {
   const { isAdmin } = useAuth()
   const [anulandoId, setAnulandoId] = useState(null)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [pagoToAnular, setPagoToAnular] = useState(null)
 
-  const handleAnular = async (pagoId) => {
-    if (!confirm('¿Estás seguro de anular este pago?')) return
+  const handleAnular = (pago) => {
+    setPagoToAnular(pago)
+    setShowConfirmModal(true)
+  }
 
-    setAnulandoId(pagoId)
-    await onAnular(pagoId)
+  const confirmAnular = async () => {
+    setShowConfirmModal(false)
+    if (!pagoToAnular) return
+
+    setAnulandoId(pagoToAnular.id)
+    await onAnular(pagoToAnular.id)
     setAnulandoId(null)
+    setPagoToAnular(null)
   }
 
   if (loading) {
@@ -104,7 +113,7 @@ export const PagoList = ({ pagos, loading, title = 'Pagos', onAnular }) => {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleAnular(pago.id)}
+                    onClick={() => handleAnular(pago)}
                     loading={anulandoId === pago.id}
                   >
                     Anular
@@ -115,6 +124,20 @@ export const PagoList = ({ pagos, loading, title = 'Pagos', onAnular }) => {
           </div>
         ))}
       </div>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        show={showConfirmModal}
+        onConfirm={confirmAnular}
+        onCancel={() => {
+          setShowConfirmModal(false)
+          setPagoToAnular(null)
+        }}
+        title="¿Estás seguro?"
+        message={pagoToAnular ? `Vas a anular un pago de ${formatCurrency(pagoToAnular.monto)}` : ''}
+        confirmText="Sí, anular"
+        cancelText="No, cancelar"
+      />
     </Card>
   )
 }

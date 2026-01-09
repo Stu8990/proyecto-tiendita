@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePagos } from '../../hooks/usePagos'
 import { supabase } from '../../lib/supabase'
-import { Button, Input, Card } from '../ui'
+import { Button, Input, Card, ConfirmModal, SuccessModal } from '../ui'
+import { formatCurrency } from '../../utils/formatters'
 
 /**
  * Formulario para registrar pagos (solo admin)
@@ -21,7 +22,8 @@ export const PagoForm = ({ userIdProp, onSuccess }) => {
   })
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   // Cargar lista de usuarios (solo si es admin y no hay userIdProp)
   useEffect(() => {
@@ -79,8 +81,13 @@ export const PagoForm = ({ userIdProp, onSuccess }) => {
 
     if (!validate()) return
 
+    // Mostrar modal de confirmación en lugar de registrar directamente
+    setShowConfirmModal(true)
+  }
+
+  const confirmSubmit = async () => {
+    setShowConfirmModal(false)
     setIsLoading(true)
-    setSuccessMessage('')
     setErrors({})
 
     const pagoData = {
@@ -102,8 +109,8 @@ export const PagoForm = ({ userIdProp, onSuccess }) => {
       monto: ''
     })
 
-    setSuccessMessage('Pago registrado exitosamente')
-    setTimeout(() => setSuccessMessage(''), 3000)
+    // Mostrar modal de éxito
+    setShowSuccessModal(true)
 
     if (onSuccess) {
       onSuccess()
@@ -128,12 +135,6 @@ export const PagoForm = ({ userIdProp, onSuccess }) => {
         {errors.general && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {errors.general}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {successMessage}
           </div>
         )}
 
@@ -188,6 +189,25 @@ export const PagoForm = ({ userIdProp, onSuccess }) => {
           Registrar Pago
         </Button>
       </form>
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        show={showConfirmModal}
+        onConfirm={confirmSubmit}
+        onCancel={() => setShowConfirmModal(false)}
+        title="¿Estás seguro?"
+        message={`Vas a registrar un pago de ${formData.monto ? formatCurrency(parseFloat(formData.monto)) : '$0'}`}
+        confirmText="Sí, registrar"
+        cancelText="No, cancelar"
+      />
+
+      {/* Modal de éxito */}
+      <SuccessModal
+        show={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        message="Pago registrado exitosamente"
+        duration={3000}
+      />
     </Card>
   )
 }
