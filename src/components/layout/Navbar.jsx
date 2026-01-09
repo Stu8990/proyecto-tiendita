@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Button } from '../ui'
+import { NotificationBadge } from '../notificaciones/NotificationBadge'
 
 export const Navbar = () => {
   const { user, profile, isAdmin, signOut } = useAuth()
@@ -50,11 +51,14 @@ export const Navbar = () => {
             )}
 
             {isAdmin && (
-              <Link to="/admin">
-                <Button variant="primary" size="sm">
-                  Dashboard Admin
-                </Button>
-              </Link>
+              <>
+                <Link to="/admin">
+                  <Button variant="primary" size="sm">
+                    Dashboard Admin
+                  </Button>
+                </Link>
+                <NotificationBadge />
+              </>
             )}
 
             <Button

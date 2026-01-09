@@ -5,6 +5,8 @@ import { ConsumoList } from '../components/consumos/ConsumoList'
 import { PagoForm } from '../components/pagos/PagoForm'
 import { PagoList } from '../components/pagos/PagoList'
 import { SaldosGlobales } from '../components/saldos/SaldosGlobales'
+import { PromoForm } from '../components/promociones/PromoForm'
+import { PromoStats } from '../components/promociones/PromoStats'
 import { useConsumos } from '../hooks/useConsumos'
 import { usePagos } from '../hooks/usePagos'
 import { supabase } from '../lib/supabase'
@@ -76,7 +78,9 @@ export const AdminDashboard = () => {
     { id: 'consumos', label: 'Todos los Consumos', icon: '☕' },
     { id: 'pagos', label: 'Todos los Pagos', icon: '💵' },
     { id: 'nuevo-consumo', label: 'Registrar Consumo', icon: '➕' },
-    { id: 'nuevo-pago', label: 'Registrar Pago', icon: '✅' }
+    { id: 'nuevo-pago', label: 'Registrar Pago', icon: '✅' },
+    { id: 'promocion', label: 'Nueva Promoción', icon: '🎉' },
+    { id: 'stats-promos', label: 'Estadísticas Promos', icon: '📊' }
   ]
 
   return (
@@ -223,6 +227,24 @@ export const AdminDashboard = () => {
                 <PagoForm
                   onSuccess={refreshAll}
                 />
+              </div>
+            )}
+
+            {/* Tab: Nueva Promoción */}
+            {activeTab === 'promocion' && (
+              <div className="max-w-2xl mx-auto">
+                <PromoForm
+                  onSuccess={() => {
+                    // Opcional: hacer algo después de crear la promo
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Tab: Estadísticas de Promociones */}
+            {activeTab === 'stats-promos' && (
+              <div className="max-w-4xl mx-auto">
+                <PromoStats />
               </div>
             )}
           </div>
