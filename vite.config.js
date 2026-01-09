@@ -14,42 +14,66 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icons/*.png'],
+      devOptions: {
+        enabled: false // Desactivar en desarrollo
+      },
       manifest: {
-        name: 'Bar Deudas',
-        short_name: 'BarDeudas',
+        name: 'Bar Expoflores',
+        short_name: 'BarExpo',
         description: 'Gestión de consumos y pagos del bar de oficina',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
-            src: '/icons/icon-192x192.png',
+            src: '/vite.svg',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/icons/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           }
         ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        cleanupOutdatedCaches: true, // Limpia cachés viejos automáticamente
+        skipWaiting: true, // Actualiza inmediatamente
+        clientsClaim: true, // Toma control de la página inmediatamente
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            // Cache de API de Supabase - NetworkFirst con timeout
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'supabase-api-cache',
+              networkTimeoutSeconds: 10, // Si la red tarda más de 10s, usa caché
               expiration: {
-                maxEntries: 10,
+                maxEntries: 50,
                 maxAgeSeconds: 60 * 5 // 5 minutos
               },
               cacheableResponse: {
                 statuses: [0, 200]
               }
             }
+          },
+          {
+            // Cache de Storage de Supabase (imágenes) - CacheFirst
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-storage-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 // 24 horas para imágenes
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            // Cache de Auth - NetworkOnly (siempre red)
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/.*/i,
+            handler: 'NetworkOnly'
           }
         ]
       }
